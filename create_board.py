@@ -13,6 +13,14 @@ class Piece:
         :return: pos_list
         """
 
+    def check_if_boundary(self, row, col, board, res):
+        if isinstance(board[row][col], Piece):
+            if self.attack_same_kind(row, col, board):
+                return True
+            res.append((row, col))
+            return True
+        return True
+
     def attack_same_kind(self, row, col, board):
         return isinstance(board[row][col], Piece) and board[row][col].is_white == self.is_white
 
@@ -25,25 +33,25 @@ class Piece:
 
         for left_wing in range(1, col + 1):
             if row - left_wing in range(DIMENSION) and not row_down_col_down_block:
-                if self.attack_same_kind(row - left_wing, col - left_wing, board):
+                if self.check_if_boundary(row - left_wing, col - left_wing, board, res):
                     row_down_col_down_block = True
                     continue
                 res.append((row - left_wing, col - left_wing))
 
             if row + left_wing in range(DIMENSION) and not row_up_col_down_block:
-                if self.attack_same_kind(row + left_wing, col - left_wing, board):
+                if self.check_if_boundary(row + left_wing, col - left_wing, board, res):
                     row_up_col_down_block = True
                     continue
                 res.append((row + left_wing, col - left_wing))
 
         for right_wing in range(col + 1, len(board)):
             if row - right_wing in range(DIMENSION) and not row_down_col_up_block:
-                if self.attack_same_kind(row - right_wing, col + right_wing, board):
+                if self.check_if_boundary(row - right_wing, col + right_wing, board, res):
                     row_down_col_up_block = True
                     continue
                 res.append((row - right_wing, col + right_wing))
             if row + right_wing in range(8) and not row_up_col_up_block:
-                if self.attack_same_kind(row + right_wing, col + right_wing, board):
+                if self.check_if_boundary(row + right_wing, col + right_wing, board, res):
                     row_up_col_up_block = True
                     continue
             res.append((row + right_wing, col + right_wing))
@@ -51,19 +59,22 @@ class Piece:
         return res
 
     def populate_rows(self, row, col, board):
+
+        return [
+            *self.plain_search(0, row, row, col, False, board),
+            *self.plain_search(row + 1, DIMENSION, row, col, False, board),
+            *self.plain_search(0, col, row, col, True, board),
+            *self.plain_search(col + 1, DIMENSION, row, col, True, board)
+        ]
+
+    def plain_search(self, start, end, row, col, is_col, board):
         res = []
-        for r in range(row):
-            if not self.attack_same_kind(r, col, board):
-                res.append((r, col))
+        for index in range(start, end):
+            tup = (index, col)if is_col else (row, index)
+            if not self.check_if_boundary(tup[0], tup[1], board, res):
+                res.append(tup)
             else:
-                break
-
-        for c in range(col):
-            if not self.attack_same_kind(row, c, board):
-                res.append((row, c))
-            else:
-                break
-
+                return res
         return res
 
     def take_picture_name(self):
@@ -94,7 +105,7 @@ class Pawn(Piece):
         move_forward_row = row - 1 if self.is_white else row + 1
         if not isinstance(board[move_forward_row][col], Piece):
             res.append((move_forward_row, col))
-        res.append(*self.append_only_if_beatable(move_forward_row, col, board))
+        res += self.append_only_if_beatable(move_forward_row, col, board)
         return res
 
     def append_only_if_beatable(self, move_forward_row, col, board):
@@ -124,8 +135,8 @@ class Horse(Piece):
         col_list = [-1, +1, +2, -2, -2, +2, -1, 1]
         res = []
         for index in range(len(row_list)):
-            current_row = row_list[index]
-            current_col = col_list[index]
+            current_row = row_list[index] + row
+            current_col = col_list[index] + col
 
             if current_col in range(DIMENSION) and current_row in range(DIMENSION) and not self.attack_same_kind(
                     current_row, current_col, board):
@@ -143,7 +154,7 @@ class King(Piece):
 
     def is_checked(self, row, col, board) -> bool:
         move_forward_row = row - 1 if self.is_white else row + 1
-        for (r, c) in Pawn(self.is_white).append_only_if_beatable(move_forward_row, col, board)
+        for (r, c) in Pawn(self.is_white).append_only_if_beatable(move_forward_row, col, board):
             if isinstance(board[r][c], Pawn):
                 return True
         for (r, c) in self.populate_diagonals(row, col, board):

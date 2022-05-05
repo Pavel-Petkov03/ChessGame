@@ -64,9 +64,9 @@ class Game:
         p.init()
         screen = p.display.set_mode((WIDTH, HEIGHT))
         screen.fill(p.Color("black"))
-        game_state = GameState()
+        game_state = GameState().board
         self.load_images()
-        self.setup(screen, game_state.board)
+        self.setup(screen, game_state)
         available_fields = None
         running = True
         while running:
@@ -77,7 +77,10 @@ class Game:
                     x, y = p.mouse.get_pos()
                     x = x // SQ_SIZE
                     y = y // SQ_SIZE
-                    available_fields = None
+                    piece = game_state[y][x]
+                    if piece is not empty_pos:
+                        available_fields = piece.access_fields(y, x, game_state)
+                        print(available_fields)
 
             p.display.flip()
             p.display.update()
