@@ -1,20 +1,40 @@
+from create_board import Rock, Horse, Bishop, Queen, King, Pawn
+import pygame as p
 WIDTH = HEIGHT = 512
 DIMENSION = 8
 SQ_SIZE = WIDTH // DIMENSION
 MAX_FPS = 15
 IMAGES = {}
 empty_pos = "_"
-import pygame as p
+
 
 
 class GameState:
     def __init__(self):
         self.board = [
-            ["br", "bh", "bb", "bq", "bk", "bb", "bh", "br"],
-            ["bp" for _ in range(8)],
+            [
+                Rock(is_white=False),
+                Horse(is_white=False),
+                Bishop(is_white=False),
+                Queen(is_white=False),
+                King(is_white=False),
+                Bishop(is_white=False),
+                Horse(is_white=False),
+                Rock(is_white=False)
+            ],
+            [Pawn(is_white=False) for _ in range(8)],
             *[[empty_pos for _ in range(8)] for _ in range(4)],
-            ["wp" for _ in range(8)],
-            ["wr", "wh", "wb", "wq", "wk", "wb", "wh", "wr"],
+            [Pawn(is_white=True) for _ in range(8)],
+            [
+                Rock(is_white=True),
+                Horse(is_white=True),
+                Bishop(is_white=True),
+                Queen(is_white=True),
+                King(is_white=True),
+                Bishop(is_white=True),
+                Horse(is_white=True),
+                Rock(is_white=True)
+            ]
         ]
 
 
@@ -36,7 +56,7 @@ class Game:
                 piece = gamestate[row][col]
                 p.draw.rect(screen, color, rect)
                 if piece != empty_pos:
-                    image = IMAGES[piece]
+                    image = IMAGES[piece.take_picture_name()]
                     screen.blit(image, rect)
                     p.display.flip()
 
@@ -47,7 +67,7 @@ class Game:
         game_state = GameState()
         self.load_images()
         self.setup(screen, game_state.board)
-
+        available_fields = None
         running = True
         while running:
             for event in p.event.get():
@@ -57,6 +77,7 @@ class Game:
                     x, y = p.mouse.get_pos()
                     x = x // SQ_SIZE
                     y = y // SQ_SIZE
+                    available_fields = None
 
             p.display.flip()
             p.display.update()
