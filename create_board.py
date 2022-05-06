@@ -1,3 +1,5 @@
+
+
 DIMENSION = 8
 
 
@@ -21,6 +23,10 @@ class Piece:
             return True
         return True
 
+    @staticmethod
+    def check_in_board_boundaries(row, col, board):
+        return row in range(len(board)) and col in range(len(board))
+
     def attack_same_kind(self, row, col, board):
         return isinstance(board[row][col], Piece) and board[row][col].is_white == self.is_white
 
@@ -31,46 +37,45 @@ class Piece:
         row_up_col_down_block = False
         row_up_col_up_block = False
 
-        for left_wing in range(1, col + 1):
-            if row - left_wing in range(DIMENSION) and not row_down_col_down_block:
-                if self.check_if_boundary(row - left_wing, col - left_wing, board, res):
+        for index in range(1, col + 1):
+            if not row_down_col_down_block and self.check_in_board_boundaries(row - index, col - index, board):
+                if self.check_if_boundary(row - index, col - index, board, res):
                     row_down_col_down_block = True
-                    continue
-                res.append((row - left_wing, col - left_wing))
+                else:
+                    res.append((row - index, col - index))
 
-            if row + left_wing in range(DIMENSION) and not row_up_col_down_block:
-                if self.check_if_boundary(row + left_wing, col - left_wing, board, res):
+            if not row_up_col_down_block and self.check_in_board_boundaries(row + index, col - index, board):
+                if self.check_if_boundary(row + index, col - index, board, res):
                     row_up_col_down_block = True
-                    continue
-                res.append((row + left_wing, col - left_wing))
+                else:
+                    res.append((row + index, col - index))
 
-        for right_wing in range(col + 1, len(board)):
-            if row - right_wing in range(DIMENSION) and not row_down_col_up_block:
-                if self.check_if_boundary(row - right_wing, col + right_wing, board, res):
+            if not row_down_col_up_block and self.check_in_board_boundaries(row - index, col + index, board):
+                if self.check_if_boundary(row - index, col + index, board, res):
                     row_down_col_up_block = True
-                    continue
-                res.append((row - right_wing, col + right_wing))
-            if row + right_wing in range(8) and not row_up_col_up_block:
-                if self.check_if_boundary(row + right_wing, col + right_wing, board, res):
-                    row_up_col_up_block = True
-                    continue
-            res.append((row + right_wing, col + right_wing))
+                else:
+                    res.append((row - index, col + index))
 
+            if not row_up_col_up_block and self.check_in_board_boundaries(row + index, col + index, board):
+                if self.check_if_boundary(row + index, col + index, board, res):
+                    row_up_col_up_block = True
+                else:
+                    res.append((row + index, col + index))
         return res
 
     def populate_rows(self, row, col, board):
 
         return [
-            *self.plain_search(0, row, row, col, False, board),
-            *self.plain_search(row + 1, DIMENSION, row, col, False, board),
-            *self.plain_search(0, col, row, col, True, board),
-            *self.plain_search(col + 1, DIMENSION, row, col, True, board)
+            *self.plain_search(row - 1, -1, row, col, False, board, -1),
+            *self.plain_search(row + 1, DIMENSION, row, col, False, board, 1),
+            *self.plain_search(col - 1, -1, row, col, True, board, -1),
+            *self.plain_search(col + 1, DIMENSION, row, col, True, board, 1)
         ]
 
-    def plain_search(self, start, end, row, col, is_col, board):
+    def plain_search(self, start, end, row, col, is_col, board, step):
         res = []
-        for index in range(start, end):
-            tup = (index, col)if is_col else (row, index)
+        for index in range(start, end, step):
+            tup = (row, index) if is_col else (index, col)
             if not self.check_if_boundary(tup[0], tup[1], board, res):
                 res.append(tup)
             else:
