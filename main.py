@@ -42,6 +42,8 @@ class Game:
 
     def __init__(self):
         self.rect_list = []
+        self.board = GameState().board
+
     @staticmethod
     def load_images():
         pieces = ["bb", "bh", "bk", "bq", "br", "bp", "wr", "wb", "wh", "wk", "wq", "wp"]
@@ -49,36 +51,35 @@ class Game:
             if piece != empty_pos:
                 IMAGES[piece] = p.transform.scale(p.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
 
-    def setup(self, screen, gamestate: list[list]):
-        color_tuple = (p.Color("white"), p.Color("gray"))
+    def setup(self, screen):
+
         for row in range(DIMENSION):
             self.rect_list.append([])
             for col in range(DIMENSION):
-                color_index = (row + col) % 2
-                color = color_tuple[color_index]
+
                 rect = p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
                 self.rect_list[row].append(rect)
-                piece = gamestate[row][col]
-                p.draw.rect(screen, color, rect)
+                piece = self.board[row][col]
+                p.draw.rect(screen, self.get_cell_color(row, col), rect)
                 if piece != empty_pos:
                     image = IMAGES[piece.take_picture_name()]
                     screen.blit(image, rect)
                     p.display.update()
 
-
     @staticmethod
-    def create_rect(row, col, color, screen):
-        rect = p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
-        p.draw.rect(screen, color, rect, 1)
+    def get_cell_color(row, col):
+        color_tuple = (p.Color("white"), p.Color("gray"))
+        color_index = (row + col) % 2
+        return color_tuple[color_index]
 
     def main(self):
         p.init()
         screen = p.display.set_mode((WIDTH, HEIGHT))
         screen.fill(p.Color("black"))
-        game_state = GameState().board
         self.load_images()
-        self.setup(screen, game_state)
+        self.setup(screen)
         available_fields = None
+        last_clicked = None
         running = True
         while running:
             for event in p.event.get():
@@ -88,32 +89,53 @@ class Game:
                     x, y = p.mouse.get_pos()
                     x = x // SQ_SIZE
                     y = y // SQ_SIZE
-                    piece = game_state[y][x]
+                    piece = self.board[y][x]
                     if available_fields:
                         if self.find_location(available_fields, row=y, col=x):
-                            pass
+                            print(available_fields)
+                            self.swap(last_clicked, self.rect_list[y][x], screen)
                     else:
                         if piece is not empty_pos:
-                            available_fields = piece.access_fields(y, x, game_state)
-                            self.fill_available_cells(available_fields, screen)
+                            available_fields = piece.access_fields(y, x, self.board)
+                            last_clicked = self.rect_list[y][x]
 
             p.display.flip()
             p.display.update()
 
-    def fill_available_cells(self, array, screen):
-        green = p.Color("green")
-        for (r, c) in array:
-            self.create_rect(r, c, green, screen)
-
-    def find_location(self,  array, row, col):
+    @staticmethod
+    def find_location(array, row, col):
         for location in array:
             r, c = location
             if r == row and c == col:
                 return True
         return False
 
-    def move_piece(self):
-        pass
+    def swap(self, first_rect: p.Rect, second_rect: p.Rect, screen):
+        first_x = first_rect.x
+        first_y = first_rect.y
+        first_rect.x = second_rect.x
+        first_rect.y = second_rect.y
+        second_rect.x = first_x
+        second_rect.y = first_y
+
+        self.swap_pieces(first_rect, second_rect)
+        for rect in [first_rect, second_rect]:
+            row = rect.y // SQ_SIZE
+            col = rect.x // SQ_SIZE
+            if self.board[row][col] != empty_pos:
+                screen.blit(IMAGES[self.board[row][col].take_picture_name()], rect)
+            else:
+                p.draw.rect(screen, self.get_cell_color(row, col), rect)
+
+    @staticmethod
+    def get_index(rect):
+        return rect.y // SQ_SIZE, rect.x // SQ_SIZE
+
+    def swap_pieces(self, first_rect, second_rect):
+        (first_row, first_col) = self.get_index(first_rect)
+        (second_row, second_col) = self.get_index(second_rect)
+        self.board[first_row][first_col], self.board[second_row][second_col] = self.board[second_row][second_col], \
+                                                                               self.board[first_row][first_col]
 
 
 if __name__ == "__main__":
