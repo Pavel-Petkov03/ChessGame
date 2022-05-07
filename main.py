@@ -41,7 +41,6 @@ class GameState:
 class Game:
 
     def __init__(self):
-        self.rect_list = []
         self.board = GameState().board
 
     @staticmethod
@@ -52,12 +51,9 @@ class Game:
                 IMAGES[piece] = p.transform.scale(p.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
 
     def setup(self, screen):
-
         for row in range(DIMENSION):
-            self.rect_list.append([])
             for col in range(DIMENSION):
                 rect = p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
-                self.rect_list[row].append(rect)
                 piece = self.board[row][col]
                 p.draw.rect(screen, self.get_cell_color(row, col), rect)
                 if piece != empty_pos:
@@ -93,17 +89,18 @@ class Game:
 
                     if available_fields:
                         if self.find_location(available_fields, row=y, col=x):
-                            self.swap(last_clicked, self.rect_list[y][x], screen)
                             white_move = not white_move
+                            self.swap(last_clicked, (y, x), screen)
                             available_fields.clear()
                         else:
                             available_fields.clear()
 
                     else:
                         if piece is not empty_pos and self.check_if_players_move(y, x, white_move):
-                            print(y, x)
                             available_fields = piece.access_fields(y, x, self.board)
-                            last_clicked = self.rect_list[y][x]
+                            self.match_marked(available_fields, screen)
+                            print(available_fields)
+                            last_clicked = (y, x)
             p.display.flip()
             p.display.update()
 
@@ -118,38 +115,29 @@ class Game:
                 return True
         return False
 
-    def swap(self, first_rect: p.Rect, second_rect: p.Rect, screen):
-        first_x = first_rect.top
-        first_y = first_rect.left
-        first_rect.top = second_rect.top
-        first_rect.left = second_rect.left
-        second_rect.top = first_x
-        second_rect.left = first_y
-        self.swap_pieces(first_rect, second_rect)
-        for rect in [first_rect, second_rect]:
-            row, col = self.get_index(rect)
-            if self.board[row][col] != empty_pos:
-                screen.blit(IMAGES[self.board[row][col].take_picture_name()], rect)
-            else:
-                p.draw.rect(screen, self.get_cell_color(row, col), rect)
-
     @staticmethod
     def get_index(rect):
         return rect.y // SQ_SIZE, rect.x // SQ_SIZE
 
-    def swap_pieces(self, first_rect, second_rect):
-        (first_row, first_col) = self.get_index(first_rect)
-        (second_row, second_col) = self.get_index(second_rect)
-        self.board[first_row][first_col], self.board[second_row][second_col] = self.board[second_row][second_col], \
-                                                                               self.board[first_row][first_col]
-        self.rect_list[first_row][first_col], self.rect_list[second_row][second_col] = self.rect_list[second_row][
-                                                                                           second_col], \
-                                                                                       self.rect_list[first_row][
-                                                                                           first_col]
+    def swap(self, last_clicked: tuple, on_click: tuple, screen):
+        lx, ly = last_clicked
+        ox, oy = on_click
+        l_rect = p.Rect(ly * SQ_SIZE, lx * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+        o_rect = p.Rect(oy * SQ_SIZE, ox * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+
+        p.draw.rect(screen, self.get_cell_color(lx, ly), l_rect)
+        p.draw.rect(screen, self.get_cell_color(ox, oy), o_rect)
+        screen.blit(IMAGES[self.board[lx][ly].take_picture_name()], o_rect)
+        self.swap_matrix(self.board, lx, ly, ox, oy)
 
     @staticmethod
     def swap_matrix(m, fr, fc, sr, sc):
-        m[fr][fc], m[sr][sc] = m[sc][sr], m[fr][fc]
+        m[fr][fc], m[sr][sc] = m[sr][sc], m[fr][fc]
+
+    def match_marked(self, ar, screen):
+        for (x, y) in ar:
+            p.draw.rect(screen, p.Color("lime"), p.Rect(y*SQ_SIZE, x*SQ_SIZE, SQ_SIZE, SQ_SIZE), 1)
+
 
 
 if __name__ == "__main__":
