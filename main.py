@@ -91,9 +91,10 @@ class Game:
                         if self.find_location(available_fields, row=y, col=x):
                             white_move = not white_move
                             self.swap(last_clicked, (y, x), screen)
-                            available_fields.clear()
-                        else:
-                            available_fields.clear()
+                        self.unmark(available_fields, screen)
+                        available_fields.clear()
+
+
 
                     else:
                         if piece is not empty_pos and self.check_if_players_move(y, x, white_move):
@@ -132,12 +133,20 @@ class Game:
 
     @staticmethod
     def swap_matrix(m, fr, fc, sr, sc):
+        m[sr][sc] = empty_pos
         m[fr][fc], m[sr][sc] = m[sr][sc], m[fr][fc]
 
-    def match_marked(self, ar, screen):
+    @staticmethod
+    def match_marked(ar, screen):
         for (x, y) in ar:
-            p.draw.rect(screen, p.Color("lime"), p.Rect(y*SQ_SIZE, x*SQ_SIZE, SQ_SIZE, SQ_SIZE), 1)
+            p.draw.rect(screen, p.Color("lime"), p.Rect(y * SQ_SIZE, x * SQ_SIZE, SQ_SIZE, SQ_SIZE), 1)
 
+    def unmark(self, ar, screen):
+        for (x, y) in ar:
+            r = p.Rect(y * SQ_SIZE, x * SQ_SIZE, SQ_SIZE, SQ_SIZE)
+            p.draw.rect(screen, self.get_cell_color(x, y), r)
+            if isinstance(self.board[x][y], Piece):
+                screen.blit(IMAGES[self.board[x][y].take_picture_name()], r)
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ class Piece:
 
     def access_fields(self, row, col, board) -> list[tuple]:
         """
-        This function will be overriden over every piece
+        This function will be overridden over every piece
         we need to get current pos in order to display allowed places
         :return: pos_list
         """
@@ -21,7 +21,7 @@ class Piece:
                 return True
             res.append((row, col))
             return True
-        return True
+        return False
 
     @staticmethod
     def check_in_board_boundaries(row, col, board):
@@ -37,7 +37,7 @@ class Piece:
         row_up_col_down_block = False
         row_up_col_up_block = False
 
-        for index in range(1, col + 1):
+        for index in range(1, DIMENSION):
             if not row_down_col_down_block and self.check_in_board_boundaries(row - index, col - index, board):
                 if self.check_if_boundary(row - index, col - index, board, res):
                     row_down_col_down_block = True
@@ -137,15 +137,14 @@ class Rock(Piece):
 
 class Horse(Piece):
     def access_fields(self, row, col, board) -> list[tuple]:
-        row_list = [-2, -2, -1, -1, +1, -1, 2, 2]
+        row_list = [-2, -2, 1, -1, +1, -1, 2, 2]
         col_list = [-1, +1, +2, -2, -2, +2, -1, 1]
         res = []
         for index in range(len(row_list)):
             current_row = row_list[index] + row
             current_col = col_list[index] + col
 
-            if current_col in range(DIMENSION) and current_row in range(DIMENSION) and not self.attack_same_kind(
-                    current_row, current_col, board):
+            if current_col in range(DIMENSION) and current_row in range(DIMENSION) and not self.check_if_boundary(current_row, current_col, board, res):
                 res.append((current_row, current_col))
         return res
 
