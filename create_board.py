@@ -107,6 +107,7 @@ class Pawn(Piece):
         row_adder = row - 2 if self.is_white else row + 2
         if self.start_pos and not isinstance(board[row_adder][col], Piece):
             res.append((row_adder, col))
+            self.start_pos = False
         move_forward_row = row - 1 if self.is_white else row + 1
         if not isinstance(board[move_forward_row][col], Piece):
             res.append((move_forward_row, col))

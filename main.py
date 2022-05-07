@@ -1,4 +1,4 @@
-from create_board import Rock, Horse, Bishop, Queen, King, Pawn
+from create_board import Rock, Horse, Bishop, Queen, King, Pawn, Piece
 import pygame as p
 
 WIDTH = HEIGHT = 512
@@ -56,7 +56,6 @@ class Game:
         for row in range(DIMENSION):
             self.rect_list.append([])
             for col in range(DIMENSION):
-
                 rect = p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
                 self.rect_list[row].append(rect)
                 piece = self.board[row][col]
@@ -76,9 +75,10 @@ class Game:
         p.init()
         screen = p.display.set_mode((WIDTH, HEIGHT))
         screen.fill(p.Color("black"))
+        white_move = True
         self.load_images()
         self.setup(screen)
-        available_fields = None
+        available_fields = []
         last_clicked = None
         running = True
         while running:
@@ -90,17 +90,25 @@ class Game:
                     x = x // SQ_SIZE
                     y = y // SQ_SIZE
                     piece = self.board[y][x]
+
                     if available_fields:
                         if self.find_location(available_fields, row=y, col=x):
-                            print(available_fields)
                             self.swap(last_clicked, self.rect_list[y][x], screen)
+                            white_move = not white_move
+                            available_fields.clear()
+                        else:
+                            available_fields.clear()
+
                     else:
-                        if piece is not empty_pos:
+                        if piece is not empty_pos and self.check_if_players_move(y, x, white_move):
+                            print(y, x)
                             available_fields = piece.access_fields(y, x, self.board)
                             last_clicked = self.rect_list[y][x]
-
             p.display.flip()
             p.display.update()
+
+    def check_if_players_move(self, y, x, white_move):
+        return self.board[y][x].is_white == white_move
 
     @staticmethod
     def find_location(array, row, col):
@@ -111,17 +119,15 @@ class Game:
         return False
 
     def swap(self, first_rect: p.Rect, second_rect: p.Rect, screen):
-        first_x = first_rect.x
-        first_y = first_rect.y
-        first_rect.x = second_rect.x
-        first_rect.y = second_rect.y
-        second_rect.x = first_x
-        second_rect.y = first_y
-
+        first_x = first_rect.top
+        first_y = first_rect.left
+        first_rect.top = second_rect.top
+        first_rect.left = second_rect.left
+        second_rect.top = first_x
+        second_rect.left = first_y
         self.swap_pieces(first_rect, second_rect)
         for rect in [first_rect, second_rect]:
-            row = rect.y // SQ_SIZE
-            col = rect.x // SQ_SIZE
+            row, col = self.get_index(rect)
             if self.board[row][col] != empty_pos:
                 screen.blit(IMAGES[self.board[row][col].take_picture_name()], rect)
             else:
@@ -136,6 +142,14 @@ class Game:
         (second_row, second_col) = self.get_index(second_rect)
         self.board[first_row][first_col], self.board[second_row][second_col] = self.board[second_row][second_col], \
                                                                                self.board[first_row][first_col]
+        self.rect_list[first_row][first_col], self.rect_list[second_row][second_col] = self.rect_list[second_row][
+                                                                                           second_col], \
+                                                                                       self.rect_list[first_row][
+                                                                                           first_col]
+
+    @staticmethod
+    def swap_matrix(m, fr, fc, sr, sc):
+        m[fr][fc], m[sr][sc] = m[sc][sr], m[fr][fc]
 
 
 if __name__ == "__main__":
