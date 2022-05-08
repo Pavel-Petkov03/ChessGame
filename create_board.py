@@ -159,8 +159,8 @@ class King(Piece):
         for index in range(len(available_col)):
             r = row + available_row[index]
             c = col + available_col[index]
-            if self.check_in_board_boundaries(r, c, board) and not self.attack_same_kind(row, col,
-                                                                                         board) and not self.is_checked(
+            if self.check_in_board_boundaries(r, c, board) and not self.is_checked(r, c,
+                                                                                   board) and not self.attack_same_kind(
                     r, c, board):
                 res.append((r, c))
         return res

@@ -48,6 +48,9 @@ class Game:
             self.white_king: [7, 4],
             self.black_king: [0, 4]
         }
+        self.global_available_fields = []
+        self.available_fields = []
+        self.screen = p.display.set_mode((WIDTH, HEIGHT))
 
     @staticmethod
     def load_images():
@@ -56,15 +59,15 @@ class Game:
             if piece != empty_pos:
                 IMAGES[piece] = p.transform.scale(p.image.load(f"images/{piece}.png"), (SQ_SIZE, SQ_SIZE))
 
-    def setup(self, screen):
+    def setup(self):
         for row in range(DIMENSION):
             for col in range(DIMENSION):
                 rect = p.Rect(col * SQ_SIZE, row * SQ_SIZE, SQ_SIZE, SQ_SIZE)
                 piece = self.board[row][col]
-                p.draw.rect(screen, self.get_cell_color(row, col), rect)
+                p.draw.rect(self.screen, self.get_cell_color(row, col), rect)
                 if piece != empty_pos:
                     image = IMAGES[piece.take_picture_name()]
-                    screen.blit(image, rect)
+                    self.screen.blit(image, rect)
                     p.display.update()
 
     @staticmethod
@@ -75,11 +78,10 @@ class Game:
 
     def main(self):
         p.init()
-        screen = p.display.set_mode((WIDTH, HEIGHT))
-        screen.fill(p.Color("black"))
+
+        self.screen.fill(p.Color("black"))
         self.load_images()
-        self.setup(screen)
-        available_fields = []
+        self.setup()
         last_clicked = None
         running = True
         while running:
@@ -92,18 +94,19 @@ class Game:
                     y = y // SQ_SIZE
                     piece = self.board[y][x]
 
-                    if available_fields:
-                        if self.find_location(available_fields, row=y, col=x):
+                    if self.available_fields:
+                        if self.find_location(row=y, col=x):
                             self.is_white = not self.is_white
-                            self.swap(last_clicked, (y, x), screen)
-                            self.main_check_logic()
-                        self.unmark(available_fields, screen)
-                        available_fields.clear()
-
+                            self.swap(last_clicked, (y, x))
+                        self.unmark()
+                        self.available_fields.clear()
                     else:
                         if piece is not empty_pos and self.check_if_players_move(y, x):
-                            available_fields = piece.access_fields(y, x, self.board)
-                            self.match_marked(available_fields, screen)
+                            temporary = piece.access_fields(y, x, self.board).copy()
+                            self.generate_global_available_fields()
+                            print(self.global_available_fields)
+                            self.match_intersection_between_global_and_marked(temporary)
+                            self.match_marked()
                             last_clicked = (y, x)
             p.display.flip()
             p.display.update()
@@ -111,9 +114,8 @@ class Game:
     def check_if_players_move(self, y, x):
         return self.board[y][x].is_white == self.is_white
 
-    @staticmethod
-    def find_location(array, row, col):
-        for location in array:
+    def find_location(self, row, col):
+        for location in self.available_fields:
             r, c = location
             if r == row and c == col:
                 return True
@@ -123,15 +125,15 @@ class Game:
     def get_index(rect):
         return rect.y // SQ_SIZE, rect.x // SQ_SIZE
 
-    def swap(self, last_clicked: tuple, on_click: tuple, screen):
+    def swap(self, last_clicked: tuple, on_click: tuple):
         lx, ly = last_clicked
         ox, oy = on_click
         l_rect = p.Rect(ly * SQ_SIZE, lx * SQ_SIZE, SQ_SIZE, SQ_SIZE)
         o_rect = p.Rect(oy * SQ_SIZE, ox * SQ_SIZE, SQ_SIZE, SQ_SIZE)
 
-        p.draw.rect(screen, self.get_cell_color(lx, ly), l_rect)
-        p.draw.rect(screen, self.get_cell_color(ox, oy), o_rect)
-        screen.blit(IMAGES[self.board[lx][ly].take_picture_name()], o_rect)
+        p.draw.rect(self.screen, self.get_cell_color(lx, ly), l_rect)
+        p.draw.rect(self.screen, self.get_cell_color(ox, oy), o_rect)
+        self.screen.blit(IMAGES[self.board[lx][ly].take_picture_name()], o_rect)
         self.swap_matrix(self.board, lx, ly, ox, oy)
 
     @staticmethod
@@ -139,17 +141,16 @@ class Game:
         m[sr][sc] = empty_pos
         m[fr][fc], m[sr][sc] = m[sr][sc], m[fr][fc]
 
-    @staticmethod
-    def match_marked(ar, screen):
-        for (x, y) in ar:
-            p.draw.rect(screen, p.Color("lime"), p.Rect(y * SQ_SIZE, x * SQ_SIZE, SQ_SIZE, SQ_SIZE), 1)
+    def match_marked(self):
+        for (x, y) in self.available_fields:
+            p.draw.rect(self.screen, p.Color("lime"), p.Rect(y * SQ_SIZE, x * SQ_SIZE, SQ_SIZE, SQ_SIZE), 1)
 
-    def unmark(self, ar, screen):
-        for (x, y) in ar:
+    def unmark(self):
+        for (x, y) in self.available_fields:
             r = p.Rect(y * SQ_SIZE, x * SQ_SIZE, SQ_SIZE, SQ_SIZE)
-            p.draw.rect(screen, self.get_cell_color(x, y), r)
+            p.draw.rect(self.screen, self.get_cell_color(x, y), r)
             if isinstance(self.board[x][y], Piece):
-                screen.blit(IMAGES[self.board[x][y].take_picture_name()], r)
+                self.screen.blit(IMAGES[self.board[x][y].take_picture_name()], r)
 
     def dispatch_king_attack(self):
         current_checked_king = self.get_king()
@@ -158,10 +159,30 @@ class Game:
     def get_king(self):
         return self.white_king if self.is_white else self.black_king
 
-    def main_check_logic(self):
-        if self.dispatch_king_attack():
-            print(self.get_king().danger_log)
+    def generate_global_available_fields(self):
+        global_available = set()
+        for r in range(len(self.board)):
+            for c in range(len(self.board)):
+                piece = self.board[r][c]
+                if piece != empty_pos and piece.is_white == self.is_white:
+                    piece_available_fields = piece.access_fields(r, c, self.board)
+                    for (move_row, move_col) in piece_available_fields:
+                        temporary_field = self.board[move_row][move_col]
+                        if not piece.attack_same_kind(move_row, move_col, self.board):
+                            self.board[r][c], self.board[move_row][move_col] = empty_pos, piece
+                            if not self.dispatch_king_attack():
+                                global_available.add((move_row, move_col))
+                                self.board[r][c], self.board[move_row][move_col] = piece, temporary_field
+        self.global_available_fields = list(global_available).copy()
 
+    def match_intersection_between_global_and_marked(self, access_fields):
+        res = []
+        for index_tup in range(len(access_fields)):
+            for global_tup in range(len(self.global_available_fields)):
+                if access_fields[index_tup][0] == self.global_available_fields[global_tup][0] and \
+                        access_fields[index_tup][1] == self.global_available_fields[global_tup][1]:
+                    res.append((access_fields[index_tup][0], self.global_available_fields[global_tup][0]))
+        self.available_fields = res.copy()
 
 
 if __name__ == "__main__":
