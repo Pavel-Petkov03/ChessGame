@@ -10,14 +10,14 @@ empty_pos = "_"
 
 
 class GameState:
-    def __init__(self):
+    def __init__(self, white_king, dark_king):
         self.board = [
             [
                 Rock(is_white=False),
                 Horse(is_white=False),
                 Bishop(is_white=False),
                 Queen(is_white=False),
-                King(is_white=False),
+                dark_king,
                 Bishop(is_white=False),
                 Horse(is_white=False),
                 Rock(is_white=False)
@@ -30,7 +30,7 @@ class GameState:
                 Horse(is_white=True),
                 Bishop(is_white=True),
                 Queen(is_white=True),
-                King(is_white=True),
+                white_king,
                 Bishop(is_white=True),
                 Horse(is_white=True),
                 Rock(is_white=True)
@@ -39,9 +39,15 @@ class GameState:
 
 
 class Game:
-
     def __init__(self):
-        self.board = GameState().board
+        self.is_white = True
+        self.white_king = King(is_white=True)
+        self.black_king = King(is_white=False)
+        self.board = GameState(self.white_king, self.black_king).board
+        self.king_pos = {
+            self.white_king: [7, 4],
+            self.black_king: [0, 4]
+        }
 
     @staticmethod
     def load_images():
@@ -71,7 +77,6 @@ class Game:
         p.init()
         screen = p.display.set_mode((WIDTH, HEIGHT))
         screen.fill(p.Color("black"))
-        white_move = True
         self.load_images()
         self.setup(screen)
         available_fields = []
@@ -89,24 +94,22 @@ class Game:
 
                     if available_fields:
                         if self.find_location(available_fields, row=y, col=x):
-                            white_move = not white_move
+                            self.is_white = not self.is_white
                             self.swap(last_clicked, (y, x), screen)
+                            self.main_check_logic()
                         self.unmark(available_fields, screen)
                         available_fields.clear()
 
-
-
                     else:
-                        if piece is not empty_pos and self.check_if_players_move(y, x, white_move):
+                        if piece is not empty_pos and self.check_if_players_move(y, x):
                             available_fields = piece.access_fields(y, x, self.board)
                             self.match_marked(available_fields, screen)
-                            print(available_fields)
                             last_clicked = (y, x)
             p.display.flip()
             p.display.update()
 
-    def check_if_players_move(self, y, x, white_move):
-        return self.board[y][x].is_white == white_move
+    def check_if_players_move(self, y, x):
+        return self.board[y][x].is_white == self.is_white
 
     @staticmethod
     def find_location(array, row, col):
@@ -147,6 +150,18 @@ class Game:
             p.draw.rect(screen, self.get_cell_color(x, y), r)
             if isinstance(self.board[x][y], Piece):
                 screen.blit(IMAGES[self.board[x][y].take_picture_name()], r)
+
+    def dispatch_king_attack(self):
+        current_checked_king = self.get_king()
+        return current_checked_king.is_checked(*self.king_pos[current_checked_king], self.board)
+
+    def get_king(self):
+        return self.white_king if self.is_white else self.black_king
+
+    def main_check_logic(self):
+        if self.dispatch_king_attack():
+            print(self.get_king().danger_log)
+
 
 
 if __name__ == "__main__":
