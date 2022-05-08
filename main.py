@@ -104,8 +104,8 @@ class Game:
                         if piece is not empty_pos and self.check_if_players_move(y, x):
                             temporary = piece.access_fields(y, x, self.board).copy()
                             self.generate_global_available_fields()
-                            print(self.global_available_fields)
                             self.match_intersection_between_global_and_marked(temporary)
+                            print(self.global_available_fields)
                             self.match_marked()
                             last_clicked = (y, x)
             p.display.flip()
@@ -167,12 +167,12 @@ class Game:
                 if piece != empty_pos and piece.is_white == self.is_white:
                     piece_available_fields = piece.access_fields(r, c, self.board)
                     for (move_row, move_col) in piece_available_fields:
-                        temporary_field = self.board[move_row][move_col]
                         if not piece.attack_same_kind(move_row, move_col, self.board):
+                            temporary_field = self.board[move_row][move_col]
                             self.board[r][c], self.board[move_row][move_col] = empty_pos, piece
                             if not self.dispatch_king_attack():
                                 global_available.add((move_row, move_col))
-                                self.board[r][c], self.board[move_row][move_col] = piece, temporary_field
+                            self.board[r][c], self.board[move_row][move_col] = piece, temporary_field
         self.global_available_fields = list(global_available).copy()
 
     def match_intersection_between_global_and_marked(self, access_fields):
@@ -181,7 +181,7 @@ class Game:
             for global_tup in range(len(self.global_available_fields)):
                 if access_fields[index_tup][0] == self.global_available_fields[global_tup][0] and \
                         access_fields[index_tup][1] == self.global_available_fields[global_tup][1]:
-                    res.append((access_fields[index_tup][0], self.global_available_fields[global_tup][0]))
+                    res.append((access_fields[index_tup]))
         self.available_fields = res.copy()
 
 

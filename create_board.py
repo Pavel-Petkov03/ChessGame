@@ -100,10 +100,11 @@ class Pawn(Piece):
     def access_fields(self, row, col, board) -> list[tuple]:
         res = []
         row_adder = row - 2 if self.is_white else row + 2
-        if row in (1, 6) and not isinstance(board[row_adder][col], Piece):
+        if self.check_entry_pos(row) and not isinstance(board[row_adder][col], Piece):
             res.append((row_adder, col))
         move_forward_row = row - 1 if self.is_white else row + 1
-        if not isinstance(board[move_forward_row][col], Piece):
+        if self.check_in_board_boundaries(move_forward_row, col, board) and not isinstance(board[move_forward_row][col],
+                                                                                           Piece):
             res.append((move_forward_row, col))
         res += self.append_only_if_beatable(move_forward_row, col, board)
         return res
@@ -117,6 +118,9 @@ class Pawn(Piece):
                 board[move_forward_row][col - 1].is_white is not self.is_white:
             res.append((move_forward_row, col - 1))
         return res
+
+    def check_entry_pos(self, row):
+        return row == 1 and not self.is_white or row == 6 and self.is_white
 
 
 class Bishop(Piece):
@@ -145,12 +149,6 @@ class Horse(Piece):
 
 
 class King(Piece):
-    def __init__(self, is_white):
-        super().__init__(is_white)
-        self.danger_log = []
-        """
-        danger log will be 
-        """
 
     def access_fields(self, row, col, board) -> list[tuple]:
         res = []
@@ -161,7 +159,7 @@ class King(Piece):
             c = col + available_col[index]
             if self.check_in_board_boundaries(r, c, board) and not self.is_checked(r, c,
                                                                                    board) and not self.attack_same_kind(
-                    r, c, board):
+                r, c, board):
                 res.append((r, c))
         return res
 
@@ -173,27 +171,20 @@ class King(Piece):
 
     def is_checked(self, row, col, board) -> bool:
         move_forward_row = row - 1 if self.is_white else row + 1
-        oppositional_pawn = Pawn(self.is_white)
-        check = False
+        oppositional_pawn = Pawn(not self.is_white)
         for (r, c) in oppositional_pawn.append_only_if_beatable(move_forward_row, col, board):
             if self.check_specific_piece_attack(board, r, c, piece=oppositional_pawn):
-                check = True
-                self.danger_log.append((r, c))
+                return True
         for (r, c) in self.populate_diagonals(row, col, board):
             if isinstance(board[r][c], Queen) or isinstance(board[r][c], Bishop):
-                check = True
-                self.danger_log.append((r, c))
+                return True
         for (r, c) in self.populate_rows(row, col, board):
             if isinstance(board[r][c], Rock) or isinstance(board[r][c], Queen):
-                self.danger_log.append((r, c))
-                check = True
-
-        oppositional_horse = Horse(self.is_white)
+                return True
+        oppositional_horse = Horse(not self.is_white)
         for (r, c) in oppositional_horse.access_fields(row, col, board):
             if self.check_specific_piece_attack(board, r, c, oppositional_horse):
-                check = True
-                self.danger_log.append((r, c))
-        return check
+                return True
 
     def check_specific_piece_attack(self, board, r, c, piece):
         return isinstance(board[r][c], type(piece)) and board[r][c].is_white != self.is_white
