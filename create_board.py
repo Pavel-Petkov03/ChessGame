@@ -157,9 +157,7 @@ class King(Piece):
         for index in range(len(available_col)):
             r = row + available_row[index]
             c = col + available_col[index]
-            if self.check_in_board_boundaries(r, c, board) and not self.is_checked(r, c,
-                                                                                   board) and not self.attack_same_kind(
-                r, c, board):
+            if self.check_in_board_boundaries(r, c, board) and not self.attack_same_kind(r, c, board):
                 res.append((r, c))
         return res
 
@@ -181,9 +179,13 @@ class King(Piece):
         for (r, c) in self.populate_rows(row, col, board):
             if isinstance(board[r][c], Rock) or isinstance(board[r][c], Queen):
                 return True
-        oppositional_horse = Horse(not self.is_white)
+        oppositional_horse = Horse(self.is_white)
         for (r, c) in oppositional_horse.access_fields(row, col, board):
             if self.check_specific_piece_attack(board, r, c, oppositional_horse):
+                return True
+
+        for (r, c) in self.access_fields(row, col, board):
+            if self.check_specific_piece_attack(board, r, c, self):
                 return True
 
     def check_specific_piece_attack(self, board, r, c, piece):

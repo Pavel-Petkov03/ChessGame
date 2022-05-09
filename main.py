@@ -78,7 +78,6 @@ class Game:
 
     def main(self):
         p.init()
-
         self.screen.fill(p.Color("black"))
         self.load_images()
         self.setup()
